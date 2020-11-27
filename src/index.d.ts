@@ -32,8 +32,9 @@ type onReaderStatus = (data: ReaderStatus) => void;
 type onTagResult = (tag: string) => void;
 type onProgramResult = (data: ProgramStatus) => void;
 type onTriggerStatus = (data: TriggerStatus) => void;
+type onLocateTagResult = (data: { distance: number }) => void;
 
-export type Callbacks = onReaderStatus | onTagResult | onProgramResult | onTriggerStatus;
+export type Callbacks = onReaderStatus | onTagResult | onProgramResult | onTriggerStatus | onLocateTagResult;
 
 export declare function on(event: READER_EVENTS, callback: Callbacks): void;
 
