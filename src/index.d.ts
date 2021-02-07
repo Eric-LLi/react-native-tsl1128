@@ -52,7 +52,7 @@ export declare function getDevices(): Promise<Array<DevicesTypes>>;
 
 export declare function getDeviceDetails(): Promise<DevicesTypes | null>;
 
-export declare function setBatteryPower(power: number): Promise<void>;
+export declare function setPower(power: number): Promise<void>;
 
 export declare function programTag(oldTag : string, newTag: string): Promise<boolean>;
 
