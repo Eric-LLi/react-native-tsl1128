@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.MediaPlayer;
+//import android.media.MediaPlayer;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -79,12 +79,12 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 	private SignalStrengthResponder mSignalStrengthResponder;
 
 	//Play Sound
-	private static MediaPlayer mp = null;
-	private static Thread soundThread = null;
-	private static boolean isPlaying = false;
+//	private static MediaPlayer mp = null;
+//	private static Thread soundThread = null;
+//	private static boolean isPlaying = false;
 	private static int soundRange = -1;
 
-	private SignalPercentageConverter mPercentageConverter = new SignalPercentageConverter();
+	private final SignalPercentageConverter mPercentageConverter = new SignalPercentageConverter();
 
 	private final String READER_STATUS = "READER_STATUS";
 	private final String TRIGGER_STATUS = "TRIGGER_STATUS";
@@ -98,7 +98,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 		this.reactContext = reactContext;
 
-		mp = MediaPlayer.create(this.reactContext, R.raw.beeper);
+//		mp = MediaPlayer.create(this.reactContext, R.raw.beeper);
 	}
 
 	private void sendEvent(String eventName, @Nullable WritableMap params) {
@@ -830,7 +830,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 				public void signalStrengthReceived(Integer level) {
 					int levelNum = mPercentageConverter.asPercentage(level);
 
-					PlaySound(levelNum);
+//					PlaySound(levelNum);
 					Log.d("distance", String.valueOf(levelNum));
 
 					WritableMap map = Arguments.createMap();
@@ -882,34 +882,34 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 		return AsciiCommander.sharedInstance();
 	}
 
-	private void PlaySound(long value) {
-		if (value > 0 && value <= 30) {
-			soundRange = 1000;
-		} else if (value > 31 && value <= 75) {
-			soundRange = 600;
-		} else {
-			soundRange = 100;
-		}
-
-		if (soundThread == null) {
-			soundThread = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					while (isPlaying) {
-						if (soundRange > 0) {
-							Log.e("LOOP", soundRange + "");
-							try {
-								Thread.sleep(soundRange);
-							} catch (InterruptedException e) {
-								e.getMessage();
-							}
-							mp.start();
-						}
-
-					}
-				}
-			});
-			soundThread.start();
-		}
-	}
+//	private void PlaySound(long value) {
+//		if (value > 0 && value <= 30) {
+//			soundRange = 1000;
+//		} else if (value > 31 && value <= 75) {
+//			soundRange = 600;
+//		} else {
+//			soundRange = 100;
+//		}
+//
+//		if (soundThread == null) {
+//			soundThread = new Thread(new Runnable() {
+//				@Override
+//				public void run() {
+//					while (isPlaying) {
+//						if (soundRange > 0) {
+//							Log.e("LOOP", soundRange + "");
+//							try {
+//								Thread.sleep(soundRange);
+//							} catch (InterruptedException e) {
+//								e.getMessage();
+//							}
+//							mp.start();
+//						}
+//
+//					}
+//				}
+//			});
+//			soundThread.start();
+//		}
+//	}
 }
