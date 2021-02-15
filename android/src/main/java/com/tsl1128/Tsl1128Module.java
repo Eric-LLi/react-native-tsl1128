@@ -86,6 +86,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	private final SignalPercentageConverter mPercentageConverter = new SignalPercentageConverter();
 
+	private final String LOG = "TSL";
 	private final String READER_STATUS = "READER_STATUS";
 	private final String TRIGGER_STATUS = "TRIGGER_STATUS";
 	private final String WRITE_TAG_STATUS = "WRITE_TAG_STATUS";
@@ -94,9 +95,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	public Tsl1128Module(ReactApplicationContext reactContext) {
 		super(reactContext);
-		reactContext.addLifecycleEventListener(this);
-
 		this.reactContext = reactContext;
+		this.reactContext.addLifecycleEventListener(this);
 
 //		mp = MediaPlayer.create(this.reactContext, R.raw.beeper);
 	}
@@ -166,14 +166,17 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void isConnected(Promise promise) {
+		Log.d(LOG, "isConnected");
 		if (getCommander() != null) {
 			promise.resolve(getCommander().isConnected());
 		}
+
 		promise.resolve(false);
 	}
 
 	@ReactMethod
 	public void getDevices(Promise promise) {
+		Log.d(LOG, "getDevices");
 		try {
 			if (getCommander() == null) {
 				init();
@@ -198,6 +201,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void connect(String mac, Promise promise) {
+		Log.d(LOG, "connect");
+
 		try {
 			if (getCommander() != null && mReader != null) {
 				disconnect();
@@ -222,6 +227,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void disconnect() {
+		Log.d(LOG, "disconnect");
+
 		if (mReader != null && getCommander() != null) {
 			doSetEnabled(false);
 
@@ -238,23 +245,28 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 			cacheTags = new ArrayList<>();
 		}
+
+//		promise.resolve(true);
 	}
 
 	@ReactMethod
-	public void setSingleRead(boolean state, Promise promise) {
+	public void setSingleRead(boolean state) {
+		Log.d(LOG, "setSingleRead");
+
 		isSingleRead = state;
-		promise.resolve(true);
+//		promise.resolve(true);
 	}
 
 	@ReactMethod
-	public void clear(Promise promise) {
+	public void clear() {
+		Log.d(LOG, "clear");
 		cacheTags = new ArrayList<>();
-		promise.resolve(true);
+//		promise.resolve(true);
 	}
-
 
 	@ReactMethod
 	public void getDeviceDetails(Promise promise) {
+		Log.d(LOG, "getDeviceDetails");
 		try {
 			if (getCommander() != null && getCommander().isConnected()) {
 				BatteryStatusCommand bCommand = BatteryStatusCommand.synchronousCommand();
@@ -277,10 +289,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 	}
 
 	@ReactMethod
-	public void setBatteryPower(int level, Promise promise) {
+	public void setPower(int power, Promise promise) {
+		Log.d(LOG, "setPower");
 		try {
 			if (getCommander() != null && getCommander().isConnected()) {
-				mInventoryCommand.setOutputPower(level);
+				mInventoryCommand.setOutputPower(power);
 				mInventoryCommand.setTakeNoAction(TriState.YES);
 				getCommander().executeCommand(mInventoryCommand);
 			}
@@ -293,6 +306,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void setEnabled(boolean state, Promise promise) {
+		Log.d(LOG, "setEnabled");
 		try {
 			doSetEnabled(state);
 
@@ -304,6 +318,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void programTag(String oldTag, String newTag, Promise promise) {
+		Log.d(LOG, "programTag");
 		try {
 			boolean result = false;
 			String errMsg = "";
@@ -340,6 +355,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void enableLocateTag(Boolean isEnable, @Nullable String mTargetTagEpc, Promise promise) {
+		Log.d(LOG, "enableLocateTag");
 		try {
 			if (isEnable && mTargetTagEpc != null) {
 				isLocateMode = true;
@@ -407,6 +423,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 	@ReactMethod
 	public void locateTag(String mTargetTagEpc, Promise promise) {
+		Log.d(LOG, "locateTag");
 		try {
 			// Configure the switch actions
 //			SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
@@ -433,6 +450,10 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 		} catch (Exception err) {
 			promise.reject(err);
 		}
+	}
+
+	private void doDisconnect() {
+		//
 	}
 
 	private void init() {
