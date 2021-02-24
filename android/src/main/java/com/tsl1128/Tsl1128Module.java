@@ -277,7 +277,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
 				map.putString("name", mReader.getDisplayName());
 				map.putString("mac", mReader.getDisplayInfoLine());
-				map.putInt("power", batteryLevel);
+				map.putInt("antennaLevel", batteryLevel);
 
 				promise.resolve(map);
 			}
@@ -289,11 +289,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 	}
 
 	@ReactMethod
-	public void setPower(int power, Promise promise) {
-		Log.d(LOG, "setPower");
+	public void setAntennaLevel(int antennaLevel, Promise promise) {
+		Log.d(LOG, "setAntennaLevel");
 		try {
 			if (getCommander() != null && getCommander().isConnected()) {
-				mInventoryCommand.setOutputPower(power);
+				mInventoryCommand.setOutputPower(antennaLevel);
 				mInventoryCommand.setTakeNoAction(TriState.YES);
 				getCommander().executeCommand(mInventoryCommand);
 			}
