@@ -9,16 +9,14 @@ const eventEmitter = new NativeEventEmitter(Tsl1128);
 Tsl1128.on = (event, handler) => {
 	const eventListener = eventEmitter.addListener(event, handler);
 
-	events[event] = eventListener;
+	events[event] =  events[event] ? [...events[event], eventListener]: [eventListener];
 };
 
 Tsl1128.off = (event) => {
 	if (events.hasOwnProperty(event)) {
-		const eventListener = events[event];
+		const eventListener = events[event].shift();
 
-		eventListener.remove();
-
-		delete events[event];
+		if(eventListener) eventListener.remove();
 	}
 };
 
