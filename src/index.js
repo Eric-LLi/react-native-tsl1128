@@ -13,11 +13,19 @@ Tsl1128.on = (event, handler) => {
 };
 
 Tsl1128.off = (event) => {
-	if (events.hasOwnProperty(event)) {
+	if (Object.hasOwnProperty.call(events, event)) {
 		const eventListener = events[event].shift();
 
 		if(eventListener) eventListener.remove();
 	}
 };
+
+Tsl1128.removeAll = (event) => {
+	if (Object.hasOwnProperty.call(events, event)) {
+		eventEmitter.removeAllListeners(event);
+
+		events[event] = [];
+	}
+}
 
 export default Tsl1128;
