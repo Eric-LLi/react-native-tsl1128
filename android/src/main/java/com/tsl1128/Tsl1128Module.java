@@ -57,70 +57,70 @@ import java.util.ArrayList;
 
 public class Tsl1128Module extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
-	private final ReactApplicationContext reactContext;
-	// The Reader currently in use
-	private static Reader mReader = null;
-	private static Reader mLastUserDisconnectedReader = null;
+    private final ReactApplicationContext reactContext;
+    // The Reader currently in use
+    private static Reader mReader = null;
+    private static Reader mLastUserDisconnectedReader = null;
 
-	private static boolean mAnyTagSeen = false;
+    private static boolean mAnyTagSeen = false;
 
-	private static boolean isSingleRead = false;
+    private static boolean isSingleRead = false;
 
-	private static ArrayList<String> cacheTags = new ArrayList<>();
-	private static InventoryCommand mInventoryCommand = null;
-	private static InventoryCommand mInventoryResponder = null;
-	private static SwitchResponder mSwitchResponder = null;
-	private static WriteTransponderCommand mWriteCommand = null;
+    private static ArrayList<String> cacheTags = new ArrayList<>();
+    private static InventoryCommand mInventoryCommand = null;
+    private static InventoryCommand mInventoryResponder = null;
+    private static SwitchResponder mSwitchResponder = null;
+    private static WriteTransponderCommand mWriteCommand = null;
 
-	private static Boolean isLocateMode = false;
+    private static Boolean isLocateMode = false;
 //	private FindTagCommand mFindTagCommand;
 
-	// The responder to capture incoming RSSI responses
-	private SignalStrengthResponder mSignalStrengthResponder;
+    // The responder to capture incoming RSSI responses
+    private SignalStrengthResponder mSignalStrengthResponder;
 
-	//Play Sound
+    //Play Sound
 //	private static MediaPlayer mp = null;
 //	private static Thread soundThread = null;
 //	private static boolean isPlaying = false;
-	private static int soundRange = -1;
+    private static int soundRange = -1;
 
-	private final SignalPercentageConverter mPercentageConverter = new SignalPercentageConverter();
+    private final SignalPercentageConverter mPercentageConverter = new SignalPercentageConverter();
 
-	private final String LOG = "TSL";
-	private final String READER_STATUS = "READER_STATUS";
-	private final String TRIGGER_STATUS = "TRIGGER_STATUS";
-	private final String WRITE_TAG_STATUS = "WRITE_TAG_STATUS";
-	private final String TAG = "TAG";
-	private final String LOCATE_TAG = "LOCATE_TAG";
+    private final String LOG = "[TSL]";
+    private final String READER_STATUS = "READER_STATUS";
+    private final String TRIGGER_STATUS = "TRIGGER_STATUS";
+    private final String WRITE_TAG_STATUS = "WRITE_TAG_STATUS";
+    private final String TAG = "TAG";
+    private final String LOCATE_TAG = "LOCATE_TAG";
 
-	public Tsl1128Module(ReactApplicationContext reactContext) {
-		super(reactContext);
-		this.reactContext = reactContext;
-		this.reactContext.addLifecycleEventListener(this);
+    public Tsl1128Module(ReactApplicationContext reactContext) {
+        super(reactContext);
+        this.reactContext = reactContext;
+        this.reactContext.addLifecycleEventListener(this);
 
 //		mp = MediaPlayer.create(this.reactContext, R.raw.beeper);
-	}
+    }
 
-	private void sendEvent(String eventName, @Nullable WritableMap params) {
-		this.reactContext
-				.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-				.emit(eventName, params);
-	}
+    private void sendEvent(String eventName, @Nullable WritableMap params) {
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, params);
+    }
 
-	private void sendEvent(String eventName, String msg) {
-		this.reactContext
-				.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-				.emit(eventName, msg);
-	}
+    private void sendEvent(String eventName, String msg) {
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, msg);
+    }
 
-	@Override
-	public String getName() {
-		return "Tsl1128";
-	}
+    @Override
+    public String getName() {
+        return "Tsl1128";
+    }
 
 
-	@Override
-	public void onHostResume() {
+    @Override
+    public void onHostResume() {
 //		if (mReader != null) {
 //			doSetEnabled(true);
 //
@@ -141,10 +141,10 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 //			// Locate a Reader to use when necessary
 //			AutoSelectReader(!readerManagerDidCauseOnPause);
 //		}
-	}
+    }
 
-	@Override
-	public void onHostPause() {
+    @Override
+    public void onHostPause() {
 //		if (mReader != null) {
 //			doSetEnabled(false);
 //
@@ -157,275 +157,260 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 //
 //			ReaderManager.sharedInstance().onPause();
 //		}
-	}
+    }
 
-	@Override
-	public void onHostDestroy() {
-		disconnect();
-	}
+    @Override
+    public void onHostDestroy() {
+        doDisconnect();
+    }
 
-	@ReactMethod
-	public void isConnected(Promise promise) {
-		Log.d(LOG, "isConnected");
-		if (getCommander() != null) {
-			promise.resolve(getCommander().isConnected());
-		}
+    @ReactMethod
+    public void isConnected(Promise promise) {
+        Log.d(LOG, "isConnected");
+        if (getCommander() != null) {
+            promise.resolve(getCommander().isConnected());
+        }
 
-		promise.resolve(false);
-	}
+        promise.resolve(false);
+    }
 
-	@ReactMethod
-	public void getDevices(Promise promise) {
-		Log.d(LOG, "getDevices");
-		try {
-			if (getCommander() == null) {
-				init();
-			}
+    @ReactMethod
+    public void getDevices(Promise promise) {
+        Log.d(LOG, "getDevices");
+        try {
+            if (getCommander() == null) {
+                init();
+            }
 
-			WritableArray deviceList = Arguments.createArray();
+            WritableArray deviceList = Arguments.createArray();
 
-			ArrayList<Reader> mReaders = doGetDevices();
+            ArrayList<Reader> mReaders = doGetDevices();
 
-			for (Reader reader : mReaders) {
-				WritableMap map = Arguments.createMap();
-				map.putString("name", reader.getDisplayName());
-				map.putString("mac", reader.getDisplayInfoLine());
-				deviceList.pushMap(map);
-			}
+            for (Reader reader : mReaders) {
+                WritableMap map = Arguments.createMap();
+                map.putString("name", reader.getDisplayName());
+                map.putString("mac", reader.getDisplayInfoLine());
+                deviceList.pushMap(map);
+            }
 
-			promise.resolve(deviceList);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+            promise.resolve(deviceList);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-	@ReactMethod
-	public void connect(String mac, Promise promise) {
-		Log.d(LOG, "connect");
+    @ReactMethod
+    public void reconnect() {
+        doConnect();
+    }
 
-		try {
-			if (getCommander() != null && mReader != null) {
-				disconnect();
+    @ReactMethod
+    public void connect(String name, Promise promise) {
+        Log.d(LOG, "connect");
 
-				init();
-			}
+        try {
+            if (getCommander() != null && mReader != null) {
+                doDisconnect();
 
-			ArrayList<Reader> mReaders = doGetDevices();
-			for (Reader reader : mReaders) {
-				if (reader.getDisplayInfoLine().equals(mac)) {
-					mReader = reader;
-					mReader.connect();
-					getCommander().setReader(mReader);
-				}
-			}
+                init();
+            }
 
-			promise.resolve(mReader != null);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+            ArrayList<Reader> mReaders = doGetDevices();
+            for (Reader reader : mReaders) {
+                if (reader.getDisplayName().equals(name)) {
+                    mReader = reader;
+                    doConnect();
+                }
+            }
 
-	@ReactMethod
-	public void disconnect() {
-		Log.d(LOG, "disconnect");
+            promise.resolve(mReader != null);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-		if (mReader != null && getCommander() != null) {
-			doSetEnabled(false);
+    @ReactMethod
+    public void disconnect() {
+        Log.d(LOG, "disconnect");
 
-			// Remove observers for changes
-			ReaderManager.sharedInstance().getReaderList().readerAddedEvent().removeObserver(mAddedObserver);
-			ReaderManager.sharedInstance().getReaderList().readerUpdatedEvent().removeObserver(mUpdatedObserver);
-			ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().removeObserver(mRemovedObserver);
+        doDisconnect();
+    }
 
-			LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
+    @ReactMethod
+    public void setSingleRead(boolean state) {
+        Log.d(LOG, "setSingleRead");
 
-			mReader.disconnect();
+        isSingleRead = state;
+    }
 
-			mReader = null;
+    @ReactMethod
+    public void clear() {
+        Log.d(LOG, "clear");
+        cacheTags = new ArrayList<>();
+    }
 
-			cacheTags = new ArrayList<>();
-		}
+    @ReactMethod
+    public void getDeviceDetails(Promise promise) {
+        Log.d(LOG, "getDeviceDetails");
+        try {
+            if (getCommander() != null && getCommander().isConnected()) {
+                BatteryStatusCommand bCommand = BatteryStatusCommand.synchronousCommand();
+                getCommander().executeCommand(bCommand);
+                int batteryLevel = bCommand.getBatteryLevel();
 
-//		promise.resolve(true);
-	}
+                WritableMap map = Arguments.createMap();
 
-	@ReactMethod
-	public void setSingleRead(boolean state) {
-		Log.d(LOG, "setSingleRead");
+                map.putString("name", mReader.getDisplayName());
+                map.putString("mac", mReader.getDisplayInfoLine());
+                map.putInt("power", batteryLevel);
 
-		isSingleRead = state;
-//		promise.resolve(true);
-	}
+                promise.resolve(map);
+            }
 
-	@ReactMethod
-	public void clear() {
-		Log.d(LOG, "clear");
-		cacheTags = new ArrayList<>();
-//		promise.resolve(true);
-	}
+            promise.resolve(null);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-	@ReactMethod
-	public void getDeviceDetails(Promise promise) {
-		Log.d(LOG, "getDeviceDetails");
-		try {
-			if (getCommander() != null && getCommander().isConnected()) {
-				BatteryStatusCommand bCommand = BatteryStatusCommand.synchronousCommand();
-				getCommander().executeCommand(bCommand);
-				int batteryLevel = bCommand.getBatteryLevel();
+    @ReactMethod
+    public void setAntennaLevel(int antennaLevel, Promise promise) {
+        Log.d(LOG, "setAntennaLevel");
+        try {
+            if (getCommander() != null && getCommander().isConnected()) {
+                mInventoryCommand.setOutputPower(antennaLevel);
+                mInventoryCommand.setTakeNoAction(TriState.YES);
+                getCommander().executeCommand(mInventoryCommand);
+            }
 
-				WritableMap map = Arguments.createMap();
+            promise.resolve(true);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-				map.putString("name", mReader.getDisplayName());
-				map.putString("mac", mReader.getDisplayInfoLine());
-				map.putInt("antennaLevel", batteryLevel);
+    @ReactMethod
+    public void setEnabled(boolean state, Promise promise) {
+        Log.d(LOG, "setEnabled");
+        try {
+            doSetEnabled(state);
 
-				promise.resolve(map);
-			}
+            promise.resolve(true);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-			promise.resolve(null);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+    @ReactMethod
+    public void programTag(String oldTag, String newTag, Promise promise) {
+        Log.d(LOG, "programTag");
+        try {
+            boolean result = false;
+            String errMsg = "";
+            if (getCommander() != null && getCommander().isConnected()) {
+                InitProgramTag();
 
-	@ReactMethod
-	public void setAntennaLevel(int antennaLevel, Promise promise) {
-		Log.d(LOG, "setAntennaLevel");
-		try {
-			if (getCommander() != null && getCommander().isConnected()) {
-				mInventoryCommand.setOutputPower(antennaLevel);
-				mInventoryCommand.setTakeNoAction(TriState.YES);
-				getCommander().executeCommand(mInventoryCommand);
-			}
+                byte[] data;
+                data = HexEncoding.stringToBytes(newTag);
+                mWriteCommand.setData(data);
+                mWriteCommand.setLength(data.length / 2);
+                mWriteCommand.setSelectData(oldTag);
+                mWriteCommand.setSelectLength(oldTag.length() * 4);
+                getCommander().executeCommand(mWriteCommand);
 
-			promise.resolve(true);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+                if (!mWriteCommand.isSuccessful()) {
+                    errMsg = String.format(
+                            "%s failed!\nError code: %s\n",
+                            mWriteCommand.getClass().getSimpleName(), mWriteCommand.getErrorCode());
+                } else {
+                    result = true;
+                }
+            }
 
-	@ReactMethod
-	public void setEnabled(boolean state, Promise promise) {
-		Log.d(LOG, "setEnabled");
-		try {
-			doSetEnabled(state);
+            WritableMap map = Arguments.createMap();
+            map.putBoolean("status", result);
+            map.putString("error", errMsg);
+            sendEvent(WRITE_TAG_STATUS, map);
 
-			promise.resolve(true);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+            promise.resolve(result);
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-	@ReactMethod
-	public void programTag(String oldTag, String newTag, Promise promise) {
-		Log.d(LOG, "programTag");
-		try {
-			boolean result = false;
-			String errMsg = "";
-			if (getCommander() != null && getCommander().isConnected()) {
-				InitProgramTag();
+    @ReactMethod
+    public void enableLocateTag(Boolean isEnable, @Nullable String mTargetTagEpc, Promise promise) {
+        Log.d(LOG, "enableLocateTag");
+        try {
+            if (isEnable && mTargetTagEpc != null) {
+                isLocateMode = true;
 
-				byte[] data;
-				data = HexEncoding.stringToBytes(newTag);
-				mWriteCommand.setData(data);
-				mWriteCommand.setLength(data.length / 2);
-				mWriteCommand.setSelectData(oldTag);
-				mWriteCommand.setSelectLength(oldTag.length() * 4);
-				getCommander().executeCommand(mWriteCommand);
+                InitFindTag();
 
-				if (!mWriteCommand.isSuccessful()) {
-					errMsg = String.format(
-							"%s failed!\nError code: %s\n",
-							mWriteCommand.getClass().getSimpleName(), mWriteCommand.getErrorCode());
-				} else {
-					result = true;
-				}
-			}
+                // Configure the switch actions
+                SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
+                switchActionCommand.setResetParameters(TriState.YES);
+                switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
 
-			WritableMap map = Arguments.createMap();
-			map.putBoolean("status", result);
-			map.putString("error", errMsg);
-			sendEvent(WRITE_TAG_STATUS, map);
+                // Configure the single press switch action for the appropriate command
+                switchActionCommand.setSinglePressAction(SwitchAction.FIND_TAG);
+                // Lower the repeat delay to maximise the response rate
+                switchActionCommand.setSinglePressRepeatDelay(10);
 
-			promise.resolve(result);
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+                getCommander().executeCommand(switchActionCommand);
 
-	@ReactMethod
-	public void enableLocateTag(Boolean isEnable, @Nullable String mTargetTagEpc, Promise promise) {
-		Log.d(LOG, "enableLocateTag");
-		try {
-			if (isEnable && mTargetTagEpc != null) {
-				isLocateMode = true;
+                mInventoryCommand = InventoryCommand.synchronousCommand();
+                mInventoryCommand.setResetParameters(TriState.YES);
+                mInventoryCommand.setTakeNoAction(TriState.YES);
 
-				InitFindTag();
+                mInventoryCommand.setIncludeTransponderRssi(TriState.YES);
 
-				// Configure the switch actions
-				SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
-				switchActionCommand.setResetParameters(TriState.YES);
-				switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
+                mInventoryCommand.setQuerySession(QuerySession.SESSION_0);
+                mInventoryCommand.setQueryTarget(QueryTarget.TARGET_B);
 
-				// Configure the single press switch action for the appropriate command
-				switchActionCommand.setSinglePressAction(SwitchAction.FIND_TAG);
-				// Lower the repeat delay to maximise the response rate
-				switchActionCommand.setSinglePressRepeatDelay(10);
+                mInventoryCommand.setInventoryOnly(TriState.NO);
 
-				getCommander().executeCommand(switchActionCommand);
+                mInventoryCommand.setSelectData(mTargetTagEpc);
+                mInventoryCommand.setSelectOffset(0x20);
+                mInventoryCommand.setSelectLength(mTargetTagEpc.length() * 4);
+                mInventoryCommand.setSelectAction(SelectAction.DEASSERT_SET_B_NOT_ASSERT_SET_A);
+                mInventoryCommand.setSelectTarget(SelectTarget.SESSION_0);
 
-				mInventoryCommand = InventoryCommand.synchronousCommand();
-				mInventoryCommand.setResetParameters(TriState.YES);
-				mInventoryCommand.setTakeNoAction(TriState.YES);
+                mInventoryCommand.setUseAlert(TriState.NO);
 
-				mInventoryCommand.setIncludeTransponderRssi(TriState.YES);
+                getCommander().executeCommand(mInventoryCommand);
+                Boolean succeeded = mInventoryCommand.isSuccessful();
 
-				mInventoryCommand.setQuerySession(QuerySession.SESSION_0);
-				mInventoryCommand.setQueryTarget(QueryTarget.TARGET_B);
+                Log.d("STATUS", String.valueOf(succeeded));
 
-				mInventoryCommand.setInventoryOnly(TriState.NO);
+            } else {
+                isLocateMode = false;
 
-				mInventoryCommand.setSelectData(mTargetTagEpc);
-				mInventoryCommand.setSelectOffset(0x20);
-				mInventoryCommand.setSelectLength(mTargetTagEpc.length() * 4);
-				mInventoryCommand.setSelectAction(SelectAction.DEASSERT_SET_B_NOT_ASSERT_SET_A);
-				mInventoryCommand.setSelectTarget(SelectTarget.SESSION_0);
+                // Configure the switch actions
+                SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
+                switchActionCommand.setResetParameters(TriState.YES);
+                switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
 
-				mInventoryCommand.setUseAlert(TriState.NO);
+                // Configure the single press switch action for the appropriate command
+                switchActionCommand.setSinglePressAction(SwitchAction.INVENTORY);
+                // Lower the repeat delay to maximise the response rate
+                switchActionCommand.setSinglePressRepeatDelay(1);
 
-				getCommander().executeCommand(mInventoryCommand);
-				Boolean succeeded = mInventoryCommand.isSuccessful();
+                getCommander().executeCommand(switchActionCommand);
 
-				Log.d("STATUS", String.valueOf(succeeded));
+                InitInventory();
+            }
 
-			} else {
-				isLocateMode = false;
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-				// Configure the switch actions
-				SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
-				switchActionCommand.setResetParameters(TriState.YES);
-				switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
-
-				// Configure the single press switch action for the appropriate command
-				switchActionCommand.setSinglePressAction(SwitchAction.INVENTORY);
-				// Lower the repeat delay to maximise the response rate
-				switchActionCommand.setSinglePressRepeatDelay(1);
-
-				getCommander().executeCommand(switchActionCommand);
-
-				InitInventory();
-			}
-
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
-
-	@ReactMethod
-	public void locateTag(String mTargetTagEpc, Promise promise) {
-		Log.d(LOG, "locateTag");
-		try {
-			// Configure the switch actions
+    @ReactMethod
+    public void locateTag(String mTargetTagEpc, Promise promise) {
+        Log.d(LOG, "locateTag");
+        try {
+            // Configure the switch actions
 //			SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
 //			switchActionCommand.setResetParameters(TriState.YES);
 //			switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
@@ -447,461 +432,471 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 //			mFindTagCommand.setTakeNoAction(TriState.YES);
 //			getCommander().executeCommand(mFindTagCommand);
 
-		} catch (Exception err) {
-			promise.reject(err);
-		}
-	}
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
 
-	private void doDisconnect() {
-		//
-	}
+    private void doConnect() {
+        if (mReader != null && getCommander() != null) {
+            mReader.connect();
+            getCommander().setReader(mReader);
+        }
+    }
 
-	private void init() {
-		// Ensure the shared instance of AsciiCommander exists
-		AsciiCommander.createSharedInstance(this.reactContext);
+    private void doDisconnect() {
+        if (mReader != null && getCommander() != null) {
+            // Remove observers for changes
+            ReaderManager.sharedInstance().getReaderList().readerAddedEvent().removeObserver(mAddedObserver);
+            ReaderManager.sharedInstance().getReaderList().readerUpdatedEvent().removeObserver(mUpdatedObserver);
+            ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().removeObserver(mRemovedObserver);
 
-		AsciiCommander commander = getCommander();
+            LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
 
-		// Ensure that all existing responders are removed
-		commander.clearResponders();
+            mReader.disconnect();
 
-		//Logger
-		commander.addResponder(new LoggerResponder());
+            mReader = null;
 
-		// Add responder to enable the synchronous commands
-		commander.addSynchronousResponder();
+            cacheTags = new ArrayList<>();
+        }
+    }
 
-		// Configure the ReaderManager when necessary
-		ReaderManager.create(this.reactContext);
+    private void init() {
+        // Ensure the shared instance of AsciiCommander exists
+        AsciiCommander.createSharedInstance(this.reactContext);
 
-		// Add observers for changes
-		ReaderManager.sharedInstance().getReaderList().readerAddedEvent().addObserver(mAddedObserver);
-		ReaderManager.sharedInstance().getReaderList().readerUpdatedEvent().addObserver(mUpdatedObserver);
-		ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().addObserver(mRemovedObserver);
+        AsciiCommander commander = getCommander();
 
-		// Register to receive notifications from the AsciiCommander
-		LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
-				new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
-	}
+        // Ensure that all existing responders are removed
+        commander.clearResponders();
 
-	// ReaderList Observers
-	private Observable.Observer<Reader> mAddedObserver = new Observable.Observer<Reader>() {
-		@Override
-		public void update(Observable<? extends Reader> observable, Reader reader) {
-			// Log.e("mAddedObserver", "mAddedObserver");
-			// See if this newly added Reader should be used
-			// AutoSelectReader(true);
-		}
-	};
+        //Logger
+        commander.addResponder(new LoggerResponder());
 
-	private Observable.Observer<Reader> mUpdatedObserver = new Observable.Observer<Reader>() {
-		@Override
-		public void update(Observable<? extends Reader> observable, Reader reader) {
-			// Is this a change to the last actively disconnected reader
-			if (reader == mLastUserDisconnectedReader) {
-				// Things have changed since it was actively disconnected so
-				// treat it as new
-				mLastUserDisconnectedReader = null;
-			}
+        // Add responder to enable the synchronous commands
+        commander.addSynchronousResponder();
 
-			// Was the current Reader disconnected i.e. the connected transport went away or disconnected
-			if (reader == mReader && !reader.isConnected()) {
-				// No longer using this reader
-				mReader = null;
+        // Configure the ReaderManager when necessary
+        ReaderManager.create(this.reactContext);
 
-				// Stop using the old Reader
-				getCommander().setReader(mReader);
-			} else {
-				// See if this updated Reader should be used
-				// e.g. the Reader's USB transport connected
-				AutoSelectReader(true);
-			}
-		}
-	};
+        // Add observers for changes
+        ReaderManager.sharedInstance().getReaderList().readerAddedEvent().addObserver(mAddedObserver);
+        ReaderManager.sharedInstance().getReaderList().readerUpdatedEvent().addObserver(mUpdatedObserver);
+        ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().addObserver(mRemovedObserver);
 
-	private Observable.Observer<Reader> mRemovedObserver = new Observable.Observer<Reader>() {
-		@Override
-		public void update(Observable<? extends Reader> observable, Reader reader) {
-			// Is this a change to the last actively disconnected reader
-			if (reader == mLastUserDisconnectedReader) {
-				// Things have changed since it was actively disconnected so
-				// treat it as new
-				mLastUserDisconnectedReader = null;
-			}
+        // Register to receive notifications from the AsciiCommander
+        LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
+                new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
+    }
 
-			// Was the current Reader removed
-			if (reader == mReader) {
-				mReader = null;
+    // ReaderList Observers
+    private Observable.Observer<Reader> mAddedObserver = new Observable.Observer<Reader>() {
+        @Override
+        public void update(Observable<? extends Reader> observable, Reader reader) {
+            // Log.e("mAddedObserver", "mAddedObserver");
+            // See if this newly added Reader should be used
+            // AutoSelectReader(true);
+        }
+    };
 
-				// Stop using the old Reader
-				getCommander().setReader(mReader);
-			}
-		}
-	};
+    private Observable.Observer<Reader> mUpdatedObserver = new Observable.Observer<Reader>() {
+        @Override
+        public void update(Observable<? extends Reader> observable, Reader reader) {
+            // Is this a change to the last actively disconnected reader
+            if (reader == mLastUserDisconnectedReader) {
+                // Things have changed since it was actively disconnected so
+                // treat it as new
+                mLastUserDisconnectedReader = null;
+            }
 
-	// Handle the messages broadcast from the AsciiCommander
-	//
-	private BroadcastReceiver mCommanderMessageReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
+            // Was the current Reader disconnected i.e. the connected transport went away or disconnected
+            if (reader == mReader && !reader.isConnected()) {
+                // No longer using this reader
+                mReader = null;
 
-			String connectionStateMsg = intent.getStringExtra(AsciiCommander.REASON_KEY);
+                // Stop using the old Reader
+                getCommander().setReader(mReader);
+            } else {
+                // See if this updated Reader should be used
+                // e.g. the Reader's USB transport connected
+                AutoSelectReader(true);
+            }
+        }
+    };
 
-			if (getCommander().getConnectionState().equals(ConnectionState.CONNECTED)) {
-				resetDevice();
-				InitInventory();
-				InitTrigger();
-				SetBuzzer(false);
-				updateConfiguration();
+    private Observable.Observer<Reader> mRemovedObserver = new Observable.Observer<Reader>() {
+        @Override
+        public void update(Observable<? extends Reader> observable, Reader reader) {
+            // Is this a change to the last actively disconnected reader
+            if (reader == mLastUserDisconnectedReader) {
+                // Things have changed since it was actively disconnected so
+                // treat it as new
+                mLastUserDisconnectedReader = null;
+            }
 
-				WritableMap map = Arguments.createMap();
-				map.putBoolean("status", true);
-				map.putString("name", mReader.getDisplayName());
-				map.putString("mac", mReader.getDisplayInfoLine());
-				sendEvent(READER_STATUS, map);
-			} else if (getCommander().getConnectionState().equals(ConnectionState.DISCONNECTED)) {
-				WritableMap map = Arguments.createMap();
-				map.putBoolean("status", false);
-				sendEvent(READER_STATUS, map);
-			}
-		}
-	};
+            // Was the current Reader removed
+            if (reader == mReader) {
+                mReader = null;
+
+                // Stop using the old Reader
+                getCommander().setReader(mReader);
+            }
+        }
+    };
+
+    // Handle the messages broadcast from the AsciiCommander
+    //
+    private BroadcastReceiver mCommanderMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String connectionStateMsg = intent.getStringExtra(AsciiCommander.REASON_KEY);
+
+            if (getCommander().getConnectionState().equals(ConnectionState.CONNECTED)) {
+                resetDevice();
+                InitInventory();
+                InitTrigger();
+                SetBuzzer(false);
+                updateConfiguration();
+
+                WritableMap map = Arguments.createMap();
+                map.putBoolean("status", true);
+                map.putString("name", mReader.getDisplayName());
+                map.putString("mac", mReader.getDisplayInfoLine());
+                sendEvent(READER_STATUS, map);
+            } else if (getCommander().getConnectionState().equals(ConnectionState.DISCONNECTED)) {
+                WritableMap map = Arguments.createMap();
+                map.putBoolean("status", false);
+                sendEvent(READER_STATUS, map);
+            }
+        }
+    };
 
 
-	private void doSetEnabled(boolean state) {
-		if (getCommander() != null) {
-			// Update the commander for state changes
-			if (state) {
-				// Listener for transponders
-				getCommander().addResponder(mInventoryResponder);
+    private void doSetEnabled(boolean state) {
+        if (getCommander() != null) {
+            // Update the commander for state changes
+            if (state) {
+                // Listener for transponders
+                getCommander().addResponder(mInventoryResponder);
 
-				//Listener for trigger state
+                //Listener for trigger state
 //			getCommander().addResponder(mSwitchResponder);
 
-				// Listener for barcodes
-				// getCommander().addResponder(mBarcodeResponder);
-			} else {
-				// Stop listening for transponders
-				getCommander().removeResponder(mInventoryResponder);
+                // Listener for barcodes
+                // getCommander().addResponder(mBarcodeResponder);
+            } else {
+                // Stop listening for transponders
+                getCommander().removeResponder(mInventoryResponder);
 
-				//Listener for trigger state
+                //Listener for trigger state
 //			getCommander().removeResponder(mSwitchResponder);
 
-				// Listener for barcodes
-				// getCommander().removeResponder(mBarcodeResponder);
-			}
-		}
-	}
+                // Listener for barcodes
+                // getCommander().removeResponder(mBarcodeResponder);
+            }
+        }
+    }
 
-	private ArrayList<Reader> doGetDevices() {
-		if (getCommander() == null) {
-			init();
-		}
+    private ArrayList<Reader> doGetDevices() {
+        if (getCommander() == null) {
+            init();
+        }
 
-		ReaderManager.sharedInstance().updateList();
-		ArrayList<Reader> mReaders = ReaderManager.sharedInstance().getReaderList().list();
+        ReaderManager.sharedInstance().updateList();
+        ArrayList<Reader> mReaders = ReaderManager.sharedInstance().getReaderList().list();
 
-		return mReaders;
-	}
+        return mReaders;
+    }
 
-	private void SetBuzzer(boolean value) {
-		if (getCommander() != null && mReader.isConnected()) {
-			AlertCommand aCommand = AlertCommand.synchronousCommand();
-			aCommand.setEnableBuzzer(value ? TriState.YES : TriState.NO);
-			aCommand.setEnableVibrator(value ? TriState.YES : TriState.NO);
-			getCommander().executeCommand(aCommand);
-		}
-	}
+    private void SetBuzzer(boolean value) {
+        if (getCommander() != null && mReader.isConnected()) {
+            AlertCommand aCommand = AlertCommand.synchronousCommand();
+            aCommand.setEnableBuzzer(value ? TriState.YES : TriState.NO);
+            aCommand.setEnableVibrator(value ? TriState.YES : TriState.NO);
+            getCommander().executeCommand(aCommand);
+        }
+    }
 
-	private void updateConfiguration() {
-		if (getCommander() != null && mReader.isConnected()) {
-			mInventoryCommand.setTakeNoAction(TriState.YES);
-			getCommander().executeCommand(mInventoryCommand);
-		}
-	}
+    private void updateConfiguration() {
+        if (getCommander() != null && mReader.isConnected()) {
+            mInventoryCommand.setTakeNoAction(TriState.YES);
+            getCommander().executeCommand(mInventoryCommand);
+        }
+    }
 
-	private void AutoSelectReader(boolean attemptReconnect) {
-		ObservableReaderList readerList = ReaderManager.sharedInstance().getReaderList();
-		Reader usbReader = null;
-		if (readerList.list().size() >= 1) {
-			// Currently only support a single USB connected device so we can safely take the
-			// first CONNECTED reader if there is one
-			for (Reader reader : readerList.list()) {
-				if (reader.hasTransportOfType(TransportType.USB)) {
-					usbReader = reader;
-					break;
-				}
-			}
-		}
+    private void AutoSelectReader(boolean attemptReconnect) {
+        ObservableReaderList readerList = ReaderManager.sharedInstance().getReaderList();
+        Reader usbReader = null;
+        if (readerList.list().size() >= 1) {
+            // Currently only support a single USB connected device so we can safely take the
+            // first CONNECTED reader if there is one
+            for (Reader reader : readerList.list()) {
+                if (reader.hasTransportOfType(TransportType.USB)) {
+                    usbReader = reader;
+                    break;
+                }
+            }
+        }
 
-		if (mReader == null) {
-			if (usbReader != null && usbReader != mLastUserDisconnectedReader) {
-				// Use the Reader found, if any
-				mReader = usbReader;
-				getCommander().setReader(mReader);
-			}
-		} else {
-			// If already connected to a Reader by anything other than USB then
-			// switch to the USB Reader
-			IAsciiTransport activeTransport = mReader.getActiveTransport();
-			if (activeTransport != null && activeTransport.type() != TransportType.USB && usbReader != null) {
-				mReader.disconnect();
+        if (mReader == null) {
+            if (usbReader != null && usbReader != mLastUserDisconnectedReader) {
+                // Use the Reader found, if any
+                mReader = usbReader;
+                getCommander().setReader(mReader);
+            }
+        } else {
+            // If already connected to a Reader by anything other than USB then
+            // switch to the USB Reader
+            IAsciiTransport activeTransport = mReader.getActiveTransport();
+            if (activeTransport != null && activeTransport.type() != TransportType.USB && usbReader != null) {
+                mReader.disconnect();
 
-				mReader = usbReader;
+                mReader = usbReader;
 
-				// Use the Reader found, if any
-				getCommander().setReader(mReader);
-			}
-		}
+                // Use the Reader found, if any
+                getCommander().setReader(mReader);
+            }
+        }
 
-		// Reconnect to the chosen Reader
-		if (mReader != null
-				&& !mReader.isConnecting()
-				&& (mReader.getActiveTransport() == null || mReader.getActiveTransport().connectionStatus().value() == ConnectionState.DISCONNECTED)) {
-			// Attempt to reconnect on the last used transport unless the ReaderManager is cause of OnPause (USB device connecting)
-			if (attemptReconnect) {
-				if (mReader.allowMultipleTransports() || mReader.getLastTransportType() == null) {
-					// Reader allows multiple transports or has not yet been connected so connect to it over any available transport
-					mReader.connect();
-				} else {
-					// Reader supports only a single active transport so connect to it over the transport that was last in use
-					mReader.connect(mReader.getLastTransportType());
-				}
-			}
-		}
-	}
+        // Reconnect to the chosen Reader
+        if (mReader != null
+                && !mReader.isConnecting()
+                && (mReader.getActiveTransport() == null || mReader.getActiveTransport().connectionStatus().value() == ConnectionState.DISCONNECTED)) {
+            // Attempt to reconnect on the last used transport unless the ReaderManager is cause of OnPause (USB device connecting)
+            if (attemptReconnect) {
+                if (mReader.allowMultipleTransports() || mReader.getLastTransportType() == null) {
+                    // Reader allows multiple transports or has not yet been connected so connect to it over any available transport
+                    mReader.connect();
+                } else {
+                    // Reader supports only a single active transport so connect to it over the transport that was last in use
+                    mReader.connect(mReader.getLastTransportType());
+                }
+            }
+        }
+    }
 
-	private void InitTrigger() {
-		//Trigger
-		mSwitchResponder = new SwitchResponder();
-		mSwitchResponder.setSwitchStateReceivedDelegate(mSwitchDelegate);
-		getCommander().addResponder(mSwitchResponder);
+    private void InitTrigger() {
+        //Trigger
+        mSwitchResponder = new SwitchResponder();
+        mSwitchResponder.setSwitchStateReceivedDelegate(mSwitchDelegate);
+        getCommander().addResponder(mSwitchResponder);
 
-		// Configure the switch actions
-		SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
-		switchActionCommand.setResetParameters(TriState.YES);
-		// Enable asynchronous switch state reporting
-		switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
+        // Configure the switch actions
+        SwitchActionCommand switchActionCommand = SwitchActionCommand.synchronousCommand();
+        switchActionCommand.setResetParameters(TriState.YES);
+        // Enable asynchronous switch state reporting
+        switchActionCommand.setAsynchronousReportingEnabled(TriState.YES);
 
-		getCommander().executeCommand(switchActionCommand);
-	}
+        getCommander().executeCommand(switchActionCommand);
+    }
 
-	private void InitProgramTag() {
-		mWriteCommand = WriteTransponderCommand.synchronousCommand();
+    private void InitProgramTag() {
+        mWriteCommand = WriteTransponderCommand.synchronousCommand();
 
-		mWriteCommand.setResetParameters(TriState.YES);
+        mWriteCommand.setResetParameters(TriState.YES);
 
-		mWriteCommand.setSelectOffset(0x20);
-		mWriteCommand.setBank(Databank.ELECTRONIC_PRODUCT_CODE);
-		mWriteCommand.setOffset(2);
+        mWriteCommand.setSelectOffset(0x20);
+        mWriteCommand.setBank(Databank.ELECTRONIC_PRODUCT_CODE);
+        mWriteCommand.setOffset(2);
 
-		mWriteCommand.setSelectAction(SelectAction.DEASSERT_SET_B_NOT_ASSERT_SET_A);
-		mWriteCommand.setSelectTarget(SelectTarget.SESSION_2);
+        mWriteCommand.setSelectAction(SelectAction.DEASSERT_SET_B_NOT_ASSERT_SET_A);
+        mWriteCommand.setSelectTarget(SelectTarget.SESSION_2);
 
-		mWriteCommand.setQuerySelect(QuerySelect.ALL);
-		mWriteCommand.setQuerySession(QuerySession.SESSION_2);
-		mWriteCommand.setQueryTarget(QueryTarget.TARGET_B);
+        mWriteCommand.setQuerySelect(QuerySelect.ALL);
+        mWriteCommand.setQuerySession(QuerySession.SESSION_2);
+        mWriteCommand.setQueryTarget(QueryTarget.TARGET_B);
 
-		mWriteCommand.setTransponderReceivedDelegate(mProgramTagDelegate);
-	}
+        mWriteCommand.setTransponderReceivedDelegate(mProgramTagDelegate);
+    }
 
-	private void InitInventory() {
-		// Initiate tags array for saving scanned tags, and prevent duplicate tags.
-		cacheTags = new ArrayList<>();
+    private void InitInventory() {
+        // Initiate tags array for saving scanned tags, and prevent duplicate tags.
+        cacheTags = new ArrayList<>();
 
-		// This is the command that will be used to perform configuration changes and
-		// inventories
-		mInventoryCommand = new InventoryCommand();
-		mInventoryCommand.setResetParameters(TriState.YES);
+        // This is the command that will be used to perform configuration changes and
+        // inventories
+        mInventoryCommand = new InventoryCommand();
+        mInventoryCommand.setResetParameters(TriState.YES);
 
-		// Configure the type of inventory
-		mInventoryCommand.setIncludeTransponderRssi(TriState.YES);
-		mInventoryCommand.setIncludeChecksum(TriState.YES);
-		mInventoryCommand.setIncludePC(TriState.YES);
-		mInventoryCommand.setIncludeDateTime(TriState.YES);
+        // Configure the type of inventory
+        mInventoryCommand.setIncludeTransponderRssi(TriState.YES);
+        mInventoryCommand.setIncludeChecksum(TriState.YES);
+        mInventoryCommand.setIncludePC(TriState.YES);
+        mInventoryCommand.setIncludeDateTime(TriState.YES);
 
-		// Use an InventoryCommand as a responder to capture all incoming inventory
-		// responses
-		mInventoryResponder = new InventoryCommand();
-		// Also capture the responses that were not from App commands
-		mInventoryResponder.setCaptureNonLibraryResponses(true);
+        // Use an InventoryCommand as a responder to capture all incoming inventory
+        // responses
+        mInventoryResponder = new InventoryCommand();
+        // Also capture the responses that were not from App commands
+        mInventoryResponder.setCaptureNonLibraryResponses(true);
 
-		// Notify when each transponder is seen
-		mInventoryResponder.setTransponderReceivedDelegate(mInventoryDelegate);
+        // Notify when each transponder is seen
+        mInventoryResponder.setTransponderReceivedDelegate(mInventoryDelegate);
 
-		mInventoryResponder.setResponseLifecycleDelegate(new ICommandResponseLifecycleDelegate() {
-			@Override
-			public void responseEnded() {
-				if (!mAnyTagSeen && mInventoryCommand.getTakeNoAction() != TriState.YES) {
-					Log.i("No transponders seen", "No transponders seen");
-					if (isLocateMode) {
-						soundRange = -1;
-						WritableMap map = Arguments.createMap();
-						map.putInt("distance", 0);
-						sendEvent(LOCATE_TAG, map);
-					}
-				}
-				mInventoryCommand.setTakeNoAction(TriState.NO);
-			}
+        mInventoryResponder.setResponseLifecycleDelegate(new ICommandResponseLifecycleDelegate() {
+            @Override
+            public void responseEnded() {
+                if (!mAnyTagSeen && mInventoryCommand.getTakeNoAction() != TriState.YES) {
+                    Log.i("No transponders seen", "No transponders seen");
+                    if (isLocateMode) {
+                        soundRange = -1;
+                        WritableMap map = Arguments.createMap();
+                        map.putInt("distance", 0);
+                        sendEvent(LOCATE_TAG, map);
+                    }
+                }
+                mInventoryCommand.setTakeNoAction(TriState.NO);
+            }
 
-			@Override
-			public void responseBegan() {
-				mAnyTagSeen = false;
-			}
-		});
-	}
+            @Override
+            public void responseBegan() {
+                mAnyTagSeen = false;
+            }
+        });
+    }
 
-	private void InitFindTag() {
+    private void InitFindTag() {
 //		mFindTagCommand = FindTagCommand.synchronousCommand();
-		mSignalStrengthResponder = new SignalStrengthResponder();
+        mSignalStrengthResponder = new SignalStrengthResponder();
 
-		mSignalStrengthResponder.setRawSignalStrengthReceivedDelegate(mFindTagDelegate);
-		mSignalStrengthResponder.setPercentageSignalStrengthReceivedDelegate(mFindTagPercentageDelegate);
+        mSignalStrengthResponder.setRawSignalStrengthReceivedDelegate(mFindTagDelegate);
+        mSignalStrengthResponder.setPercentageSignalStrengthReceivedDelegate(mFindTagPercentageDelegate);
 
-		getCommander().addResponder(mSignalStrengthResponder);
+        getCommander().addResponder(mSignalStrengthResponder);
 //		mFindTagCommand.setResetParameters(TriState.YES);
 //		mFindTagCommand.setTakeNoAction(TriState.YES);
 //		getCommander().executeCommand(mFindTagCommand);
-	}
+    }
 
-	//Inventory Delegate Handler
-	private final ITransponderReceivedDelegate mInventoryDelegate =
-			new ITransponderReceivedDelegate() {
-				int mTagsSeen = 0;
+    //Inventory Delegate Handler
+    private final ITransponderReceivedDelegate mInventoryDelegate =
+            new ITransponderReceivedDelegate() {
+                int mTagsSeen = 0;
 
-				@Override
-				public void transponderReceived(TransponderData transponder, boolean moreAvailable) {
-					mTagsSeen++;
+                @Override
+                public void transponderReceived(TransponderData transponder, boolean moreAvailable) {
+                    mTagsSeen++;
 
-					//Inventory received tags
-					mAnyTagSeen = true;
-					String EPC = transponder.getEpc();
-					int rssi = transponder.getRssi();
+                    //Inventory received tags
+                    mAnyTagSeen = true;
+                    String EPC = transponder.getEpc();
+                    int rssi = transponder.getRssi();
 
-					if (isSingleRead) {
-						if (rssi > -60) {
-							sendEvent(TAG, EPC);
-						}
-					} else {
-						if (addTagToList(EPC)) {
-							sendEvent(TAG, EPC);
-						}
-					}
-				}
-			};
+                    if (isSingleRead) {
+                        if (rssi > -60) {
+                            sendEvent(TAG, EPC);
+                        }
+                    } else {
+                        if (addTagToList(EPC)) {
+                            sendEvent(TAG, EPC);
+                        }
+                    }
+                }
+            };
 
-	//Trigger Handler
-	private final ISwitchStateReceivedDelegate mSwitchDelegate = new ISwitchStateReceivedDelegate() {
-		@Override
-		public void switchStateReceived(SwitchState state) {
-			// Use the alert command to indicate the type of asynchronous switch press
-			// No vibration just vary the tone & duration
-			if (SwitchState.OFF.equals(state)) {
-				if (isLocateMode) {
-					if (mSignalStrengthResponder.getRawSignalStrengthReceivedDelegate() != null) {
-						mSignalStrengthResponder.getRawSignalStrengthReceivedDelegate().signalStrengthReceived(0);
-					}
-					if (mSignalStrengthResponder.getPercentageSignalStrengthReceivedDelegate() != null) {
-						mSignalStrengthResponder.getPercentageSignalStrengthReceivedDelegate().signalStrengthReceived(0);
-					}
+    //Trigger Handler
+    private final ISwitchStateReceivedDelegate mSwitchDelegate = new ISwitchStateReceivedDelegate() {
+        @Override
+        public void switchStateReceived(SwitchState state) {
+            // Use the alert command to indicate the type of asynchronous switch press
+            // No vibration just vary the tone & duration
+            if (SwitchState.OFF.equals(state)) {
+                if (isLocateMode) {
+                    if (mSignalStrengthResponder.getRawSignalStrengthReceivedDelegate() != null) {
+                        mSignalStrengthResponder.getRawSignalStrengthReceivedDelegate().signalStrengthReceived(0);
+                    }
+                    if (mSignalStrengthResponder.getPercentageSignalStrengthReceivedDelegate() != null) {
+                        mSignalStrengthResponder.getPercentageSignalStrengthReceivedDelegate().signalStrengthReceived(0);
+                    }
 
-					WritableMap map = Arguments.createMap();
-					map.putInt("distance", 0);
-					sendEvent(LOCATE_TAG, map);
-				} else {
-					WritableMap map = Arguments.createMap();
-					map.putBoolean("status", false);
-					sendEvent(TRIGGER_STATUS, map);
-				}
+                    WritableMap map = Arguments.createMap();
+                    map.putInt("distance", 0);
+                    sendEvent(LOCATE_TAG, map);
+                } else {
+                    WritableMap map = Arguments.createMap();
+                    map.putBoolean("status", false);
+                    sendEvent(TRIGGER_STATUS, map);
+                }
 
-			} else {
-				WritableMap map = Arguments.createMap();
-				map.putBoolean("status", true);
-				sendEvent(TRIGGER_STATUS, map);
-			}
-		}
-	};
+            } else {
+                WritableMap map = Arguments.createMap();
+                map.putBoolean("status", true);
+                sendEvent(TRIGGER_STATUS, map);
+            }
+        }
+    };
 
-	//Program tag Delegate Handler
-	private final ITransponderReceivedDelegate mProgramTagDelegate =
-			new ITransponderReceivedDelegate() {
-				@Override
-				public void transponderReceived(TransponderData transponderData, boolean b) {
-					String eaMsg = transponderData.getAccessErrorCode() == null ? "" : transponderData.getAccessErrorCode().getDescription() + " (EA)";
-					String ebMsg = transponderData.getBackscatterErrorCode() == null ? "" : transponderData.getBackscatterErrorCode().getDescription() + " (EB)";
-					String errorMsg = eaMsg + ebMsg;
-					if (errorMsg.length() > 0) {
+    //Program tag Delegate Handler
+    private final ITransponderReceivedDelegate mProgramTagDelegate =
+            new ITransponderReceivedDelegate() {
+                @Override
+                public void transponderReceived(TransponderData transponderData, boolean b) {
+                    String eaMsg = transponderData.getAccessErrorCode() == null ? "" : transponderData.getAccessErrorCode().getDescription() + " (EA)";
+                    String ebMsg = transponderData.getBackscatterErrorCode() == null ? "" : transponderData.getBackscatterErrorCode().getDescription() + " (EB)";
+                    String errorMsg = eaMsg + ebMsg;
+                    if (errorMsg.length() > 0) {
 //						WritableMap map = Arguments.createMap();
 //						map.putBoolean("status", false);
 //						map.putString("error", errorMsg);
 //						sendEvent(WRITE_TAG_STATUS, map);
-					} else {
+                    } else {
 //						WritableMap map = Arguments.createMap();
 //						map.putBoolean("status", true);
 //						map.putString("error", null);
 //						sendEvent(WRITE_TAG_STATUS, map);
-					}
-				}
-			};
+                    }
+                }
+            };
 
-	//Find Tag Delegate Handler
-	private final ISignalStrengthReceivedDelegate mFindTagDelegate =
-			new ISignalStrengthReceivedDelegate() {
-				@Override
-				public void signalStrengthReceived(Integer level) {
-					int levelNum = mPercentageConverter.asPercentage(level);
+    //Find Tag Delegate Handler
+    private final ISignalStrengthReceivedDelegate mFindTagDelegate =
+            new ISignalStrengthReceivedDelegate() {
+                @Override
+                public void signalStrengthReceived(Integer level) {
+                    int levelNum = mPercentageConverter.asPercentage(level);
 
 //					PlaySound(levelNum);
-					Log.d("distance", String.valueOf(levelNum));
+                    Log.d("distance", String.valueOf(levelNum));
 
-					WritableMap map = Arguments.createMap();
-					map.putInt("distance", levelNum);
-					sendEvent(LOCATE_TAG, map);
-				}
-			};
+                    WritableMap map = Arguments.createMap();
+                    map.putInt("distance", levelNum);
+                    sendEvent(LOCATE_TAG, map);
+                }
+            };
 
-	private final ISignalStrengthReceivedDelegate mFindTagPercentageDelegate =
-			new ISignalStrengthReceivedDelegate() {
-				@Override
-				public void signalStrengthReceived(Integer level) {
-					int percentage = mPercentageConverter.asPercentage(level);
+    private final ISignalStrengthReceivedDelegate mFindTagPercentageDelegate =
+            new ISignalStrengthReceivedDelegate() {
+                @Override
+                public void signalStrengthReceived(Integer level) {
+                    int percentage = mPercentageConverter.asPercentage(level);
 //					WritableMap map = Arguments.createMap();
 //					map.putInt("distance", percentage);
 //					sendEvent(LOCATE_TAG, map);
-				}
-			};
+                }
+            };
 
-	private void resetDevice() {
-		if (getCommander().isConnected()) {
-			FactoryDefaultsCommand fdCommand = new FactoryDefaultsCommand();
-			fdCommand.setResetParameters(TriState.YES);
-			getCommander().executeCommand(fdCommand);
-		}
-	}
+    private void resetDevice() {
+        if (getCommander().isConnected()) {
+            FactoryDefaultsCommand fdCommand = new FactoryDefaultsCommand();
+            fdCommand.setResetParameters(TriState.YES);
+            getCommander().executeCommand(fdCommand);
+        }
+    }
 
-	private boolean addTagToList(String strEPC) {
-		if (strEPC != null) {
-			if (!checkIsExisted(strEPC)) {
-				cacheTags.add(strEPC);
-				return true;
-			}
-		}
-		return false;
-	}
+    private boolean addTagToList(String strEPC) {
+        if (strEPC != null) {
+            if (!cacheTags.contains(strEPC)) {
+                cacheTags.add(strEPC);
+                return true;
+            }
+        }
+        return false;
+    }
 
-	private boolean checkIsExisted(String strEPC) {
-		for (int i = 0; i < cacheTags.size(); i++) {
-			String tag = cacheTags.get(i);
-			if (strEPC != null && strEPC.equals(tag)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private AsciiCommander getCommander() {
-		return AsciiCommander.sharedInstance();
-	}
+    private AsciiCommander getCommander() {
+        return AsciiCommander.sharedInstance();
+    }
 
 //	private void PlaySound(long value) {
 //		if (value > 0 && value <= 30) {

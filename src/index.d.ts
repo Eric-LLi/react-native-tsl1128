@@ -16,13 +16,15 @@ export type BatteryTypes = {
 }
 
 export type DevicesTypes = {
-	name?: string;
-	mac?: string;
+	name: string;
+	mac: string;
+	antennaLevel?: string;
 	power?: number;
 };
 
 export type ReaderStatus = {
 	status: boolean;
+	error: string
 };
 
 export type ProgramStatus = {
@@ -49,11 +51,11 @@ export declare function off(event: READER_EVENTS): void;
 
 export declare function removeAll(event: READER_EVENTS): void;
 
-export declare function connect(mac: string): Promise<boolean>;
+export declare function connect(name: string): Promise<boolean>;
 
 export declare function reconnect(): void;
 
-export declare function disconnect(): Promise<boolean>;
+export declare function disconnect(): Promise<void>;
 
 export declare function isConnected(): Promise<boolean>;
 

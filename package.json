@@ -7,10 +7,26 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "android",
+    "src",
+    "!.DS_Store",
+    "!.gradle",
+    "!.idea",
+    "!build",
+    "!gradle",
+    "!*.iml",
+    "!gradlew",
+    "!gradlew.bat",
+    "!local.properties",
+    "!project.xcworkspace",
+    "!xcshareddata",
+    "!xcuserdata"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/github_account/react-native-tsl1128.git",
-    "baseUrl": "https://github.com/github_account/react-native-tsl1128"
+    "url": "git+https://github.com/Eric-LLi/react-native-tsl1128.git",
+    "baseUrl": "https://github.com/Eric-LLi/react-native-tsl1128"
   },
   "keywords": [
     "react-native"
