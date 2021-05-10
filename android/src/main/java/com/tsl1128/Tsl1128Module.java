@@ -785,7 +785,9 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
                     if (isSingleRead) {
                         if (rssi > -60) {
-                            sendEvent(TAG, EPC);
+                            if (addTagToList(EPC) && cacheTags.size() == 1) {
+                                sendEvent(TAG, EPC);
+                            }
                         }
                     } else {
                         if (addTagToList(EPC)) {
