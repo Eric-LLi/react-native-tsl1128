@@ -437,6 +437,17 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         }
     }
 
+    @ReactMethod
+    public void softReadCancel(boolean enable, Promise promise) {
+        try {
+            if (enable) {
+                //
+            }
+        } catch (Exception err) {
+            promise.reject(err);
+        }
+    }
+
     private void doConnect() {
         if (mReader != null && getCommander() != null) {
             mReader.connect();
