@@ -20,6 +20,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.uk.tsl.rfid.asciiprotocol.AsciiCommander;
+import com.uk.tsl.rfid.asciiprotocol.DeviceProperties;
 import com.uk.tsl.rfid.asciiprotocol.commands.AlertCommand;
 import com.uk.tsl.rfid.asciiprotocol.commands.BatteryStatusCommand;
 import com.uk.tsl.rfid.asciiprotocol.commands.FactoryDefaultsCommand;
@@ -42,6 +43,7 @@ import com.uk.tsl.rfid.asciiprotocol.enumerations.SelectTarget;
 import com.uk.tsl.rfid.asciiprotocol.enumerations.SwitchAction;
 import com.uk.tsl.rfid.asciiprotocol.enumerations.SwitchState;
 import com.uk.tsl.rfid.asciiprotocol.enumerations.TriState;
+import com.uk.tsl.rfid.asciiprotocol.parameters.AntennaParameters;
 import com.uk.tsl.rfid.asciiprotocol.responders.ICommandResponseLifecycleDelegate;
 import com.uk.tsl.rfid.asciiprotocol.responders.ISignalStrengthReceivedDelegate;
 import com.uk.tsl.rfid.asciiprotocol.responders.ISwitchStateReceivedDelegate;
@@ -71,6 +73,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     private static InventoryCommand mInventoryResponder = null;
     private static SwitchResponder mSwitchResponder = null;
     private static WriteTransponderCommand mWriteCommand = null;
+    private static int antennaLevel = -1;
 
     private static Boolean isLocateMode = false;
 //	private FindTagCommand mFindTagCommand;
@@ -209,9 +212,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         Log.d(LOG, "connect");
 
         try {
-            if (getCommander() != null && mReader != null) {
+            if (getCommander() != null) {
                 doDisconnect();
+            }
 
+            if (getCommander() == null) {
                 init();
             }
 
@@ -259,10 +264,10 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                 int batteryLevel = bCommand.getBatteryLevel();
 
                 WritableMap map = Arguments.createMap();
-
                 map.putString("name", mReader.getDisplayName());
                 map.putString("mac", mReader.getDisplayInfoLine());
                 map.putInt("power", batteryLevel);
+                map.putInt("antennaLevel", antennaLevel);
 
                 promise.resolve(map);
             }
@@ -274,13 +279,15 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     }
 
     @ReactMethod
-    public void setAntennaLevel(int antennaLevel, Promise promise) {
+    public void setAntennaLevel(int level, Promise promise) {
         Log.d(LOG, "setAntennaLevel");
         try {
             if (getCommander() != null && getCommander().isConnected()) {
-                mInventoryCommand.setOutputPower(antennaLevel);
+                mInventoryCommand.setOutputPower(level);
                 mInventoryCommand.setTakeNoAction(TriState.YES);
                 getCommander().executeCommand(mInventoryCommand);
+
+                antennaLevel = level;
             }
 
             promise.resolve(true);
@@ -441,7 +448,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     public void softReadCancel(boolean enable, Promise promise) {
         try {
             if (enable) {
-                //
+                read();
             }
         } catch (Exception err) {
             promise.reject(err);
@@ -498,6 +505,13 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         // Register to receive notifications from the AsciiCommander
         LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
                 new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
+    }
+
+    private void read() {
+        if (getCommander() != null && getCommander().isConnected()) {
+            mInventoryCommand.setTakeNoAction(TriState.NO);
+            getCommander().executeCommand(mInventoryCommand);
+        }
     }
 
     // ReaderList Observers
@@ -729,6 +743,10 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         // inventories
         mInventoryCommand = new InventoryCommand();
         mInventoryCommand.setResetParameters(TriState.YES);
+
+        mInventoryCommand.setQuerySession(QuerySession.SESSION_1);
+        mInventoryCommand.setOutputPower(getCommander().getDeviceProperties().getMaximumCarrierPower());
+        antennaLevel = getCommander().getDeviceProperties().getMaximumCarrierPower();
 
         // Configure the type of inventory
         mInventoryCommand.setIncludeTransponderRssi(TriState.YES);
