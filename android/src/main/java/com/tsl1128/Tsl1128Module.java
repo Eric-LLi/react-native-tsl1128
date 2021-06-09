@@ -68,7 +68,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
     private static boolean isSingleRead = false;
 
-    private static ArrayList<String> cacheTags = new ArrayList<>();
+    private static final ArrayList<String> cacheTags = new ArrayList<>();
     private static InventoryCommand mInventoryCommand = null;
     private static InventoryCommand mInventoryResponder = null;
     private static SwitchResponder mSwitchResponder = null;
@@ -104,7 +104,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 //		mp = MediaPlayer.create(this.reactContext, R.raw.beeper);
     }
 
-    private void sendEvent(String eventName, @Nullable WritableMap params) {
+    private void sendEvent(String eventName, WritableMap params) {
         this.reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit(eventName, params);
@@ -221,12 +221,17 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
             }
 
             ArrayList<Reader> mReaders = doGetDevices();
-            for (Reader reader : mReaders) {
-                if (reader.getDisplayName().equals(name)) {
-                    mReader = reader;
-                    doConnect();
+            if (mReaders.size() == 1) {
+                mReader = mReaders.get(0);
+            } else {
+                for (Reader reader : mReaders) {
+                    if (reader.getDisplayName().equals(name)) {
+                        mReader = reader;
+                    }
                 }
             }
+
+            doConnect();
 
             promise.resolve(mReader != null);
         } catch (Exception err) {
@@ -251,7 +256,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     @ReactMethod
     public void clear() {
         Log.d(LOG, "clear");
-        cacheTags = new ArrayList<>();
+        cacheTags.clear();
     }
 
     @ReactMethod
@@ -475,7 +480,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
             mReader = null;
 
-            cacheTags = new ArrayList<>();
+            cacheTags.clear();
         }
     }
 
@@ -515,7 +520,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     }
 
     // ReaderList Observers
-    private Observable.Observer<Reader> mAddedObserver = new Observable.Observer<Reader>() {
+    private final Observable.Observer<Reader> mAddedObserver = new Observable.Observer<Reader>() {
         @Override
         public void update(Observable<? extends Reader> observable, Reader reader) {
             // Log.e("mAddedObserver", "mAddedObserver");
@@ -524,7 +529,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         }
     };
 
-    private Observable.Observer<Reader> mUpdatedObserver = new Observable.Observer<Reader>() {
+    private final Observable.Observer<Reader> mUpdatedObserver = new Observable.Observer<Reader>() {
         @Override
         public void update(Observable<? extends Reader> observable, Reader reader) {
             // Is this a change to the last actively disconnected reader
@@ -549,7 +554,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         }
     };
 
-    private Observable.Observer<Reader> mRemovedObserver = new Observable.Observer<Reader>() {
+    private final Observable.Observer<Reader> mRemovedObserver = new Observable.Observer<Reader>() {
         @Override
         public void update(Observable<? extends Reader> observable, Reader reader) {
             // Is this a change to the last actively disconnected reader
@@ -571,7 +576,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
     // Handle the messages broadcast from the AsciiCommander
     //
-    private BroadcastReceiver mCommanderMessageReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mCommanderMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -592,6 +597,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
             } else if (getCommander().getConnectionState().equals(ConnectionState.DISCONNECTED)) {
                 WritableMap map = Arguments.createMap();
                 map.putBoolean("status", false);
+                map.putString("error", null);
                 sendEvent(READER_STATUS, map);
             }
         }
@@ -737,7 +743,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
     private void InitInventory() {
         // Initiate tags array for saving scanned tags, and prevent duplicate tags.
-        cacheTags = new ArrayList<>();
+        cacheTags.clear();
 
         // This is the command that will be used to perform configuration changes and
         // inventories
@@ -809,6 +815,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
                     //Inventory received tags
                     mAnyTagSeen = true;
+
                     String EPC = transponder.getEpc();
                     int rssi = transponder.getRssi();
 
