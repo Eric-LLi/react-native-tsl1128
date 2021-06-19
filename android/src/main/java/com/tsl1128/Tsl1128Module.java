@@ -94,6 +94,7 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     private final String TRIGGER_STATUS = "TRIGGER_STATUS";
     private final String WRITE_TAG_STATUS = "WRITE_TAG_STATUS";
     private final String TAG = "TAG";
+    private final String TAGS = "TAGS";
     private final String LOCATE_TAG = "LOCATE_TAG";
 
     public Tsl1128Module(ReactApplicationContext reactContext) {
@@ -116,6 +117,12 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                 .emit(eventName, msg);
     }
 
+    private void sendEvent(String eventName, WritableArray array) {
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, array);
+    }
+
     @Override
     public String getName() {
         return "Tsl1128";
@@ -124,12 +131,12 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
     @Override
     public void onHostResume() {
-//		if (mReader != null) {
+        if (mReader != null) {
 //			doSetEnabled(true);
 //
 //			// Register to receive notifications from the AsciiCommander
-//			LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
-//					new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
+            LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
+                    new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
 //
 //			// Remember if the pause/resume was caused by ReaderManager - this will be cleared when ReaderManager.onResume() is called
 //			boolean readerManagerDidCauseOnPause = ReaderManager.sharedInstance().didCauseOnPause();
@@ -143,23 +150,23 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 //
 //			// Locate a Reader to use when necessary
 //			AutoSelectReader(!readerManagerDidCauseOnPause);
-//		}
+        }
     }
 
     @Override
     public void onHostPause() {
-//		if (mReader != null) {
+        if (mReader != null) {
 //			doSetEnabled(false);
 //
 //			// Register to receive notifications from the AsciiCommander
-//			LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
+            LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
 //
 //			if (!ReaderManager.sharedInstance().didCauseOnPause() && mReader != null) {
 //				mReader.disconnect();
 //			}
 //
 //			ReaderManager.sharedInstance().onPause();
-//		}
+        }
     }
 
     @Override
@@ -216,9 +223,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                 doDisconnect();
             }
 
-            if (getCommander() == null) {
-                init();
-            }
+            init();
+
+//            if (getCommander() == null) {
+//
+//            }
 
             ArrayList<Reader> mReaders = doGetDevices();
             if (mReaders.size() == 1) {
@@ -293,9 +302,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                 getCommander().executeCommand(mInventoryCommand);
 
                 antennaLevel = level;
-            }
 
-            promise.resolve(true);
+                promise.resolve(true);
+            } else {
+                throw new Exception("Reader is not connected");
+            }
         } catch (Exception err) {
             promise.reject(err);
         }
@@ -462,7 +473,11 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
     private void doConnect() {
         if (mReader != null && getCommander() != null) {
+            LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
+                    new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
+
             mReader.connect();
+
             getCommander().setReader(mReader);
         }
     }
@@ -474,13 +489,13 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
             ReaderManager.sharedInstance().getReaderList().readerUpdatedEvent().removeObserver(mUpdatedObserver);
             ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().removeObserver(mRemovedObserver);
 
-            LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
-
             mReader.disconnect();
 
             mReader = null;
 
             cacheTags.clear();
+
+            LocalBroadcastManager.getInstance(this.reactContext).unregisterReceiver(mCommanderMessageReceiver);
         }
     }
 
@@ -508,8 +523,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         ReaderManager.sharedInstance().getReaderList().readerRemovedEvent().addObserver(mRemovedObserver);
 
         // Register to receive notifications from the AsciiCommander
-        LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
-                new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
+//        LocalBroadcastManager.getInstance(this.reactContext).registerReceiver(mCommanderMessageReceiver,
+//                new IntentFilter(AsciiCommander.STATE_CHANGED_NOTIFICATION));
     }
 
     private void read() {
@@ -582,7 +597,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
 
             String connectionStateMsg = intent.getStringExtra(AsciiCommander.REASON_KEY);
 
-            if (getCommander().getConnectionState().equals(ConnectionState.CONNECTED)) {
+//            if (getCommander().getConnectionState().equals(ConnectionState.CONNECTED)) {
+            if (connectionStateMsg.equals("Device connected")) {
                 resetDevice();
                 InitInventory();
                 InitTrigger();
@@ -594,7 +610,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                 map.putString("name", mReader.getDisplayName());
                 map.putString("mac", mReader.getDisplayInfoLine());
                 sendEvent(READER_STATUS, map);
-            } else if (getCommander().getConnectionState().equals(ConnectionState.DISCONNECTED)) {
+            } else if (connectionStateMsg.equals("Device disconnected")) {
+//            } else if (getCommander().getConnectionState().equals(ConnectionState.DISCONNECTED)) {
                 WritableMap map = Arguments.createMap();
                 map.putBoolean("status", false);
                 map.putString("error", null);
@@ -750,6 +767,8 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
         mInventoryCommand = new InventoryCommand();
         mInventoryCommand.setResetParameters(TriState.YES);
 
+        mInventoryCommand.setQuerySelect(QuerySelect.ALL);
+        mInventoryCommand.setQueryTarget(QueryTarget.TARGET_A);
         mInventoryCommand.setQuerySession(QuerySession.SESSION_1);
         mInventoryCommand.setOutputPower(getCommander().getDeviceProperties().getMaximumCarrierPower());
         antennaLevel = getCommander().getDeviceProperties().getMaximumCarrierPower();
@@ -808,6 +827,9 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
     private final ITransponderReceivedDelegate mInventoryDelegate =
             new ITransponderReceivedDelegate() {
                 int mTagsSeen = 0;
+                final ArrayList<String> temp_tags = new ArrayList<>();
+                String temp_tag = "";
+                int temp_rssi = -1000;
 
                 @Override
                 public void transponderReceived(TransponderData transponder, boolean moreAvailable) {
@@ -820,14 +842,26 @@ public class Tsl1128Module extends ReactContextBaseJavaModule implements Lifecyc
                     int rssi = transponder.getRssi();
 
                     if (isSingleRead) {
-                        if (rssi > -60) {
-                            if (addTagToList(EPC) && cacheTags.size() == 1) {
-                                sendEvent(TAG, EPC);
-                            }
+                        if (rssi >= temp_rssi) {
+                            temp_tag = EPC;
+                            temp_rssi = rssi;
+                        }
+
+                        if (!moreAvailable) {
+                            sendEvent(TAG, temp_tag);
+
+                            temp_tag = "";
+                            temp_rssi = -1000;
                         }
                     } else {
                         if (addTagToList(EPC)) {
-                            sendEvent(TAG, EPC);
+                            temp_tags.add(EPC);
+                        }
+
+                        if (!moreAvailable) {
+                            sendEvent(TAGS, Arguments.fromList(temp_tags));
+
+                            temp_tags.clear();
                         }
                     }
                 }
